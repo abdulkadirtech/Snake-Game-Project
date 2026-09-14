@@ -34,9 +34,12 @@ class Game:
         )
 
         # Create Food
+        # Pass the snake body so the first food never
+        # spawns underneath the snake.
         self.food = Food(
             self.width,
-            self.height
+            self.height,
+            self.snake.body
         )
 
         # UI
@@ -75,8 +78,8 @@ class Game:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
 
-                # Restart
-                if event.key == pygame.K_r:
+                # Restart (only meaningful after Game Over)
+                if event.key == pygame.K_r and self.game_over:
                     self.restart()
 
                 # Snake movement
@@ -160,5 +163,6 @@ class Game:
 
         self.food = Food(
             self.width,
-            self.height
+            self.height,
+            self.snake.body
         )

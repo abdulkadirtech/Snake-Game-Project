@@ -3,14 +3,22 @@ import pygame
 
 
 class Food:
-    def __init__(self, width, height):
+    def __init__(self, width, height, snake_body=None):
 
         self.block_size = 20
 
         self.width = width
         self.height = height
 
+        # The very first food must also avoid the snake body,
+        # otherwise it can spawn underneath the snake at startup
+        # and the player simply cannot see it.
+        if snake_body is None:
+            snake_body = []
+
         self.position = self.random_position()
+
+        self.randomize(snake_body)
 
     def random_position(self):
 

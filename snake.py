@@ -25,7 +25,14 @@ class Snake:
 
     def change_direction(self, direction):
 
-        # Prevent snake from immediately turning back
+        # Prevent snake from immediately turning back.
+        #
+        # Note: we compare against self.direction (the direction
+        # actually committed by the last move()), NOT next_direction.
+        # This is deliberate -- it also blocks the case where the
+        # player presses two keys inside a single frame, e.g.
+        # moving RIGHT and pressing UP then LEFT before the next
+        # move(): LEFT is rejected because direction is still RIGHT.
 
         if direction == "UP" and self.direction != "DOWN":
             self.next_direction = "UP"
