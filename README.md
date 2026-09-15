@@ -59,8 +59,11 @@ to 80 ms, after which it stays at that pace.
 | Gold | +3 points, grows 3 segments |
 | Bomb | Eating it explodes and ends the game |
 
-A bomb nobody eats blinks, then explodes on its own after 4 seconds and
-is replaced — possibly by another bomb.
+Food does not wait forever. Anything left uneaten blinks and then
+vanishes, replaced by something new — fruit after 9 seconds, gold after
+6, a bomb after 4. A bomb explodes as it goes: the snake survives the
+blast but loses 5 segments and 5 points. So a bomb costs you either way;
+it just costs less if you stay away from it.
 
 Sound effects and the background music are generated as waveforms at
 startup (`audio.py`). The music only plays during active play, and the

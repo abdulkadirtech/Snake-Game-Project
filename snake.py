@@ -97,6 +97,16 @@ class Snake:
         for _ in range(count):
             self.body.append(tail)
 
+    def shrink(self, count=1):
+
+        # Never shorter than the starting length.
+        for _ in range(count):
+
+            if len(self.body) <= 3:
+                break
+
+            self.body.pop()
+
     def get_head_position(self):
 
         return self.body[0]

@@ -432,10 +432,18 @@ class Game:
                 self.snake.body
             )
 
-        # An uneaten bomb goes off, and something else takes its place.
+        # Uneaten food goes away and another takes its place. A bomb
+        # goes off as it does: the snake survives the blast, but loses
+        # five segments and five points.
         elif self.food.expired():
 
-            self.blow_up(self.food.position)
+            if self.food.kind == "bomb":
+
+                self.blow_up(self.food.position)
+
+                self.snake.shrink(5)
+
+                self.score = max(0, self.score - 5)
 
             self.food.randomize(
                 self.snake.body

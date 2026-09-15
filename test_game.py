@@ -91,13 +91,38 @@ ok &= t5d
 # ── Test 5c: an uneaten bomb burns out and is replaced ──
 import food as food_module
 g = Game()
+g.snake.grow(9)
+g.score = 12
+n0 = len(g.snake.body)
 g.food.kind = "bomb"
-g.food.spawned_at = pygame.time.get_ticks() - food_module.BOMB_LIFETIME - 1
+g.food.spawned_at = pygame.time.get_ticks() - food_module.LIFETIMES["bomb"] - 1
 t5c = g.food.expired()
 g.update()
-t5c = t5c and not g.food.expired() and len(g.explosions) == 1
-print(f"Test 5c bomb burns out             : {'PASS' if t5c else 'FAIL'}")
+t5c = (t5c and not g.food.expired() and len(g.explosions) == 1
+       and len(g.snake.body) == n0 - 5 and g.score == 7)
+# and it cannot push either below their floor
+g2 = Game()
+g2.food.kind = "bomb"
+g2.food.spawned_at = pygame.time.get_ticks() - food_module.LIFETIMES["bomb"] - 1
+g2.update()
+t5c = t5c and len(g2.snake.body) == 3 and g2.score == 0
+print(f"Test 5c bomb burnout costs 5       : {'PASS' if t5c else 'FAIL'}")
 ok &= t5c
+
+# ── Test 5f: ordinary food also times out, with no penalty ──
+g = Game()
+g.snake.grow(6)
+g.score = 8
+n0 = len(g.snake.body)
+g.food.kind = "apple"
+g.food.position = (200, 200)
+g.food.spawned_at = pygame.time.get_ticks() - food_module.DEFAULT_LIFETIME - 1
+t5f = g.food.expired()
+g.update()
+t5f = (t5f and not g.food.expired()
+       and g.score == 8 and len(g.snake.body) == n0 and not g.explosions)
+print(f"Test 5f stale food is replaced     : {'PASS' if t5f else 'FAIL'}")
+ok &= t5f
 
 # ── Test 5b: food never spawns behind the score bar ──
 from theme import HUD_HEIGHT

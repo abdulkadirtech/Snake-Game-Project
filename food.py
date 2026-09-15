@@ -15,9 +15,17 @@ FOOD_TYPES = [
     ("bomb", 0, 9),
 ]
 
-# A bomb left alone burns out and is replaced. Nothing stops the
-# replacement being another bomb.
-BOMB_LIFETIME = 4000
+# Food left alone goes away and is replaced. Nothing stops the
+# replacement being the same kind again.
+DEFAULT_LIFETIME = 9000
+
+LIFETIMES = {
+    "gold": 6000,
+    "bomb": 4000,
+}
+
+# How long a food blinks before it goes.
+BLINK_FOR = 1200
 
 NAMES = [name for name, _, _ in FOOD_TYPES]
 WEIGHTS = [weight for _, _, weight in FOOD_TYPES]
@@ -84,27 +92,31 @@ class Food:
 
         self.spawned_at = pygame.time.get_ticks()
 
+    @property
+    def lifetime(self):
+
+        return LIFETIMES.get(self.kind, DEFAULT_LIFETIME)
+
+    def time_left(self):
+
+        return self.lifetime - (pygame.time.get_ticks() - self.spawned_at)
+
     def expired(self):
         """
-        True once a bomb has sat around long enough to burn out.
+        True once this food has sat around uneaten for long enough.
         """
 
-        if self.kind != "bomb":
-            return False
-
-        return pygame.time.get_ticks() - self.spawned_at > BOMB_LIFETIME
+        return self.time_left() < 0
 
     def draw(self, screen):
 
         x, y = self.position
 
-        # A bomb about to burn out blinks.
-        if self.kind == "bomb":
+        # Food about to go blinks.
+        left = self.time_left()
 
-            left = BOMB_LIFETIME - (pygame.time.get_ticks() - self.spawned_at)
-
-            if left < 1200 and (left // 150) % 2 == 0:
-                return
+        if left < BLINK_FOR and (left // 150) % 2 == 0:
+            return
 
         rect = pygame.Rect(
             x,
