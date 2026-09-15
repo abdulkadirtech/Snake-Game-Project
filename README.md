@@ -1,176 +1,112 @@
-# 贪吃蛇游戏 Snake Game
+# Snake Game
 
-基于 Python 与 Pygame 的贪吃蛇游戏设计与实现
+A Snake game built with Python and Pygame.
 
-- **小组成员**：何岚、李思齐
-- **指导教师**：黄天羽
-- **开发语言**：Python 3
-- **开发框架**：Pygame 2.x
+- **Team**: 何岚, 李思齐， 奥马尔
+- **Instructor**: 黄天羽
+- **Built with**: Python 3, Pygame 2.x
 
----
-
-## 一、运行方法
+## Running it
 
 ```bash
-# 1. 安装依赖
 pip install pygame
-
-# 2. 运行游戏
 python main.py
 ```
 
-### 操作方式
+The window can be resized, minimised and maximised. The play field grows
+with it; the score bar keeps its height.
 
-| 按键 | 功能 |
-|------|------|
-| ↑ ↓ ← → | 控制蛇的移动方向 |
-| R | Game Over 后重新开始 |
-| ESC | 退出游戏 |
+## Controls
 
----
+| Key | Action |
+|-----|--------|
+| ↑ ↓ ← → | Steer the snake (and move around menus) |
+| Enter / Space | Choose the selected item |
+| P | Pause |
+| R | Restart |
+| S | Open the setting page |
+| Esc | Back to the home page |
+| Q | Quit |
 
-## 二、程序结构
+Menus and buttons also respond to the mouse.
 
-```
-SnakeGame/
-│
-├── main.py        # 程序入口：初始化 Pygame，创建 Game 并启动
-├── game.py        # 主循环、事件处理、状态协调、重新开始
-├── snake.py       # 蛇的移动、增长、碰撞检测、绘制
-├── food.py        # 食物的随机生成（含去重）与绘制
-├── ui.py          # 分数显示、Game Over 界面
-│
-├── test_game.py   # 自动化测试
-└── README.md
-```
+## Pages
 
-### 模块职责
+- **Home** — SNAKE GAME, START, SETTING, QUIT.
+- **Setting** — sound on/off, snake colour (green, orange, blue), and a
+  link to the instruction page.
+- **Instructions** — the key list above.
+- **Game** — score bar on top, play field below it.
+- **Paused** and **Game Over** — a panel showing the score, with
+  RESUME/REPLAY and QUIT.
 
-| 模块 | 职责 |
-|------|------|
-| `main.py` | 初始化 Pygame，创建 `Game` 实例并调用 `run()` |
-| `game.py` | 游戏主循环、键盘事件、分数、判定吃食物与碰撞、重启 |
-| `snake.py` | 维护蛇身坐标列表，处理移动、增长、碰撞判定 |
-| `food.py` | 生成不与蛇身重合的随机食物位置 |
-| `ui.py` | 绘制实时分数与 Game Over 遮罩界面 |
+Everything is drawn in a green-on-black terminal style using a bitmap
+font defined in code (`pixelfont.py`), so the game ships with no image
+or audio files at all.
 
-设计原则：`Game` 只负责**协调**，不直接操作蛇的坐标；
-`Snake` / `Food` / `UI` 各自封装数据与绘制，便于单独调试和扩展。
+## Playing
 
----
+The snake slithers: a wave travels down its body as it moves, it glides
+between cells rather than jumping, and it grows thicker as it gets
+longer. It dies on the walls or on itself.
 
-## 三、核心技术点
+It starts slow and speeds up with every point, from 170 ms per step down
+to 80 ms, after which it stays at that pace.
 
-### 1. 防止蛇瞬间反向
+| Food | Effect |
+|------|--------|
+| Apple, mango, watermelon, kiwi | +1 point, grows 1 segment |
+| Gold | +3 points, grows 3 segments |
+| Bomb | Eating it explodes and ends the game |
 
-不直接修改当前方向，而是先存入 `next_direction`，在 `move()` 时才提交：
+A bomb nobody eats blinks, then explodes on its own after 4 seconds and
+is replaced — possibly by another bomb.
 
-```python
-if direction == "LEFT" and self.direction != "RIGHT":
-    self.next_direction = "LEFT"
-```
+Sound effects and the background music are generated as waveforms at
+startup (`audio.py`). The music only plays during active play, and the
+SOUND setting mutes everything.
 
-比较对象是 `self.direction`（上一次 `move()` 已提交的方向），
-而不是 `next_direction`。这样即使玩家在同一帧内连按两个方向键
-（例如向右移动时快速按 ↑ 再按 ←），反向的那一次也会被拒绝。
+## Structure
 
-### 2. 食物不落在蛇身上（拒绝采样）
+| File | Responsibility |
+|------|----------------|
+| `main.py` | Entry point: starts Pygame and runs `Game` |
+| `game.py` | Main loop, state machine, input, scoring, resizing |
+| `snake.py` | Body, movement, collisions, and the slither drawing |
+| `food.py` | Food types, spawning, and their artwork |
+| `effects.py` | The bomb explosion |
+| `menu.py`, `settings.py`, `instructions.py`, `panel.py` | The pages |
+| `ui.py` | The score bar |
+| `pixelfont.py`, `theme.py` | Bitmap font and shared colours |
+| `audio.py` | Generated beep, explosion and music |
+| `test_game.py` | Automated checks |
 
-```python
-def randomize(self, snake_body):
-    new_position = self.random_position()
-    while new_position in snake_body:
-        new_position = self.random_position()
-    self.position = new_position
-```
+`Game` only coordinates: it never touches the snake's coordinates
+directly. Each module owns its own data and drawing.
 
-### 3. 碰撞检测拆成两个独立判断
+## Notable details
 
-```python
-if x < 0 or x >= w or y < 0 or y >= h:   # ① 撞墙
-    return True
-if self.body[0] in self.body[1:]:        # ② 撞自己
-    return True
-```
+**No instant reversal.** A direction key sets `next_direction`, which
+`move()` commits later, and it is checked against the *committed*
+direction. So pressing ↑ then ← in one frame while moving right cannot
+turn the snake back into itself.
 
-### 4. 重新开始 = 重建对象
+**Food never hidden.** Spawning resamples until the cell is free of the
+snake, and never picks a row behind the score bar.
 
-不逐个字段清零，直接重建 `Snake` 和 `Food`，从根本上杜绝状态残留：
+**Restart rebuilds objects** rather than resetting fields one by one, so
+no stale state can survive.
 
-```python
-def restart(self):
-    self.score = 0
-    self.game_over = False
-    self.snake = Snake(self.width, self.height)
-    self.food = Food(self.width, self.height, self.snake.body)
-```
+**Fixed-step movement.** The snake steps on a timer while the loop runs
+at 60 FPS, and frames in between are drawn part way through the step —
+speed is set by that timer, not by how fast the game renders.
 
-### 5. 速度控制
-
-```python
-self.clock.tick(10)   # 10 FPS，每秒移动 10 格
-```
-
-用 Pygame 时钟锁帧，把"移动速度"与"刷新率"解耦。
-
----
-
-## 四、本次修复记录
-
-### 修复：开局第一个食物可能生成在蛇身上
-
-**问题**：`Food.__init__` 直接调用 `random_position()`，没有做去重检查。
-`randomize()` 是检查了的，所以只有**开局的第一个食物**有概率被蛇身盖住，
-玩家看不见食物。
-
-**修复**：`Food.__init__` 增加可选参数 `snake_body`，构造时即调用
-`randomize()` 做去重；`game.py` 在创建和重启时都把蛇身传进去。
-
-```python
-# food.py
-def __init__(self, width, height, snake_body=None):
-    ...
-    self.randomize(snake_body)
-
-# game.py
-self.food = Food(self.width, self.height, self.snake.body)
-```
-
-### 改进：R 键只在 Game Over 后生效
-
-原先游戏进行中按 R 也会重开，容易误触。
-
-```python
-if event.key == pygame.K_r and self.game_over:
-    self.restart()
-```
-
----
-
-## 五、测试
+## Tests
 
 ```bash
 python test_game.py
 ```
 
-包含 6 项检查：
-
-| # | 测试内容 |
-|---|----------|
-| 1 | 同一帧连按两键不能反向自杀 |
-| 2 | 开局食物不落在蛇身上（3000 次随机种子） |
-| 3 | 重新开始后分数、长度、状态完全复位 |
-| 4 | 碰撞检测（撞墙 / 撞自己 / 正常均正确） |
-| 5 | 吃到食物后长度 +1、分数 +10 |
-| 6 | 2000 步随机操作压力测试不崩溃 |
-
-当前状态：**6 / 6 全部通过**
-
----
-
-## 六、后续计划
-
-- [ ] 完善界面：网格线、开始页面、暂停功能
-- [ ] 增加最高分记录
-- [ ] 增加难度递增（随分数提高速度）
-- [ ] 录制演示视频与设计文档
+Covers reversal blocking, food placement (including staying below the
+score bar), restart, collisions, per-food score and growth, the fatal
+bomb, bomb burnout, and a 2000-step fuzz run. All passing.

@@ -60,16 +60,70 @@ t4 = t4a and t4b and t4c
 print(f"Test 4 collision detection        : {'PASS' if t4 else 'FAIL'}")
 ok &= t4
 
-# ── Test 5: eating food grows snake by exactly 1 and scores +10 ──
-g = Game()
-n0, sc0 = len(g.snake.body), g.score
-g.food.position = g.snake.get_head_position()
-head = g.snake.get_head_position()
-g.food.position = (head[0] + 20, head[1])   # directly ahead (moving RIGHT)
-g.update()
-t5 = len(g.snake.body) == n0 + 1 and g.score == sc0 + 10
-print(f"Test 5 eat -> +1 length, +10 score : {'PASS' if t5 else 'FAIL'} (len {n0}->{len(g.snake.body)}, score {sc0}->{g.score})")
+# ── Test 5: eating grows snake by 1 and scores per food type ──
+def eat(kind, start_score=0, grow=0):
+    g = Game()
+    g.score = start_score
+    g.snake.grow(grow)
+    n0 = len(g.snake.body)
+    head = g.snake.get_head_position()
+    g.food.position = (head[0] + 20, head[1])   # directly ahead (moving RIGHT)
+    g.food.kind = kind
+    g.update()
+    return len(g.snake.body) - n0, g.score
+
+t5 = (eat("apple") == (1, 1)
+      and eat("watermelon") == (1, 1)
+      and eat("gold") == (3, 3))             # worth 3, so it grows 3
+print(f"Test 5 length and score per food   : {'PASS' if t5 else 'FAIL'}")
 ok &= t5
+
+# ── Test 5d: eating a bomb explodes and ends the game ──
+g = Game()
+head = g.snake.get_head_position()
+g.food.position = (head[0] + 20, head[1])
+g.food.kind = "bomb"
+g.update()
+t5d = g.game_over and len(g.explosions) == 1
+print(f"Test 5d eating a bomb is fatal     : {'PASS' if t5d else 'FAIL'}")
+ok &= t5d
+
+# ── Test 5c: an uneaten bomb burns out and is replaced ──
+import food as food_module
+g = Game()
+g.food.kind = "bomb"
+g.food.spawned_at = pygame.time.get_ticks() - food_module.BOMB_LIFETIME - 1
+t5c = g.food.expired()
+g.update()
+t5c = t5c and not g.food.expired() and len(g.explosions) == 1
+print(f"Test 5c bomb burns out             : {'PASS' if t5c else 'FAIL'}")
+ok &= t5c
+
+# ── Test 5b: food never spawns behind the score bar ──
+from theme import HUD_HEIGHT
+random.seed(7)
+g = Game()
+bad = 0
+for _ in range(2000):
+    g.food.randomize(g.snake.body)
+    if g.food.position[1] < HUD_HEIGHT:
+        bad += 1
+t5b = bad == 0
+print(f"Test 5b food below score bar       : {'PASS' if t5b else 'FAIL'} (above={bad})")
+ok &= t5b
+
+# ── Test 5e: the snake speeds up with the score, then stops ──
+import game as game_module
+g = Game()
+slow = g.step_interval
+g.score = 10
+faster = g.step_interval
+g.score = 1000
+fastest = g.step_interval
+t5e = (slow == game_module.START_STEP and faster < slow
+       and fastest == game_module.MIN_STEP)
+print(f"Test 5e speed rises then caps      : {'PASS' if t5e else 'FAIL'} ({slow}->{faster}->{fastest} ms)")
+ok &= t5e
 
 # ── Test 6: 2000-step random play never crashes ──
 try:
