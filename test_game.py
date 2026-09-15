@@ -16,6 +16,100 @@ from food import Food
 
 ok = True
 
+# ── Test 0: screen state switching and start flow ──
+g = Game()
+g.switch_screen("SETTINGS")
+g.switch_screen("INSTRUCTIONS")
+g.switch_screen("HOME")
+g.start_game()
+t0 = g.state == "PLAYING" and g.game_over is False and len(g.snake.body) == 3
+print(f"Test 0 screen states             : {'PASS' if t0 else 'FAIL'} (state={g.state})")
+ok &= t0
+
+# ── Test 0b: home screen buttons trigger the expected screens ──
+g = Game()
+g.switch_screen("HOME")
+start_center = g.ui.home_buttons["START"].center
+settings_center = g.ui.home_buttons["SETTINGS"].center
+quit_center = g.ui.home_buttons["QUIT"].center
+
+g.handle_home_click(start_center)
+t0b1 = g.state == "PLAYING"
+g.switch_screen("HOME")
+g.handle_home_click(settings_center)
+t0b2 = g.state == "SETTINGS"
+g.switch_screen("HOME")
+g.handle_home_click(quit_center)
+t0b3 = g.running is False
+print(f"Test 0b home buttons             : {'PASS' if (t0b1 and t0b2 and t0b3) else 'FAIL'}")
+ok &= t0b1 and t0b2 and t0b3
+
+# ── Test 0c: settings screen controls persist and update the snake color ──
+g = Game()
+g.switch_screen("SETTINGS")
+start_sound = g.settings["sound_on"]
+g.handle_settings_click(g.ui.settings_buttons["SOUND"].center)
+t0c1 = g.settings["sound_on"] is not start_sound
+new_color = g.ui.color_palette[1]
+click_color = g.ui.color_rects[1].center
+g.handle_settings_click(click_color)
+t0c2 = g.settings["snake_color"] == new_color and g.snake.color == new_color
+g.handle_settings_click(g.ui.settings_buttons["KEYBOARD"].center)
+t0c3 = g.state == "INSTRUCTIONS"
+g.switch_screen("SETTINGS")
+g.handle_settings_click(g.ui.settings_buttons["BACK"].center)
+t0c4 = g.state == "HOME"
+print(f"Test 0c settings controls        : {'PASS' if (t0c1 and t0c2 and t0c3 and t0c4) else 'FAIL'}")
+ok &= t0c1 and t0c2 and t0c3 and t0c4
+
+# ── Test 0d: keyboard instructions screen back button returns to settings ──
+g = Game()
+g.switch_screen("INSTRUCTIONS")
+back_rect = g.ui.get_instructions_back_rect()
+g.handle_events = lambda: None
+# simulate click on the BACK button
+if g.ui.get_instructions_back_rect().collidepoint(back_rect.center):
+    g.switch_screen("SETTINGS")
+    g.handle_settings_click(g.ui.settings_buttons["BACK"].center)
+    # back button from settings returns to home
+    g.switch_screen("SETTINGS")
+    g.handle_settings_click(g.ui.settings_buttons["BACK"].center)
+
+t0d = g.state == "HOME"
+print(f"Test 0d keyboard nav             : {'PASS' if t0d else 'FAIL'} (state={g.state})")
+ok &= t0d
+
+# ── Test 0e: real mouse click events trigger button actions ──
+g = Game()
+g.switch_screen("HOME")
+pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=g.ui.home_buttons["START"].center))
+g.handle_events()
+t0e1 = g.state == "PLAYING"
+
+g.switch_screen("HOME")
+pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=g.ui.home_buttons["SETTINGS"].center))
+g.handle_events()
+t0e2 = g.state == "SETTINGS"
+
+g.switch_screen("HOME")
+pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=g.ui.home_buttons["QUIT"].center))
+g.handle_events()
+t0e3 = g.running is False
+print(f"Test 0e mouse clicks             : {'PASS' if (t0e1 and t0e2 and t0e3) else 'FAIL'}")
+ok &= t0e1 and t0e2 and t0e3
+
+# ── Test 0f: P and Q toggle pause/quit flow ──
+g = Game()
+g.start_game()
+pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_p))
+g.handle_events()
+t0f1 = g.state == "PAUSED"
+pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_q))
+g.handle_events()
+t0f2 = g.state == "HOME"
+print(f"Test 0f pause/quit keys         : {'PASS' if (t0f1 and t0f2) else 'FAIL'} (state={g.state})")
+ok &= t0f1 and t0f2
+
 # ── Test 1: same-frame double key press cannot reverse ──
 s = Snake(800, 600)          # starts moving RIGHT
 s.change_direction("UP")     # legal

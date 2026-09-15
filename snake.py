@@ -2,9 +2,10 @@ import pygame
 
 
 class Snake:
-    def __init__(self, width, height):
+    def __init__(self, width, height, color=(80, 220, 100)):
 
         self.block_size = 20
+        self.color = color
 
         # Starting position
         start_x = width // 2
@@ -110,7 +111,7 @@ class Snake:
                 # Head
                 pygame.draw.rect(
                     screen,
-                    (80, 220, 100),
+                    self.color,
                     (
                         x,
                         y,
@@ -123,7 +124,7 @@ class Snake:
                 # Body
                 pygame.draw.rect(
                     screen,
-                    (50, 170, 80),
+                    tuple(max(0, channel - 30) for channel in self.color),
                     (
                         x,
                         y,
