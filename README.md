@@ -24,11 +24,13 @@ with it; the score bar keeps its height.
 | Enter / Space | Choose the selected item |
 | P | Pause |
 | R | Restart |
-| S | Open the setting page |
-| Esc | Back to the home page |
-| Q | Quit |
+| S | Open the setting page (from the home page) |
+| Esc | Back to the home page (from a menu, or after game over) |
+| Q | Quit (from any menu or panel) |
 
-Menus and buttons also respond to the mouse.
+During play only the arrows, P and R do anything; leaving the game goes
+through the pause or game-over panel. Menus and buttons also respond to
+the mouse.
 
 ## Pages
 

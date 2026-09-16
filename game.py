@@ -329,20 +329,9 @@ class Game:
             # Keyboard
             if event.type == pygame.KEYDOWN:
 
-                # Back to the home page
-                if event.key == pygame.K_ESCAPE:
-                    self.state = "menu"
-
-                # Quit the game
-                elif event.key == pygame.K_q:
-                    self.running = False
-
-                # Open the setting page
-                elif event.key == pygame.K_s:
-                    self.state = "settings"
-
-                # Pause
-                elif event.key == pygame.K_p and not self.game_over:
+                # Only pause and restart work mid-game; everything
+                # else goes through the pause or game-over panel.
+                if event.key == pygame.K_p and not self.game_over:
                     self.paused = not self.paused
 
                 # Restart
