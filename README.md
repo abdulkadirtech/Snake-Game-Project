@@ -73,6 +73,8 @@ SOUND setting mutes everything.
 
 ## Structure
 
+![Repository structure](docs/structure.png)
+
 | File | Responsibility |
 |------|----------------|
 | `main.py` | Entry point: starts Pygame and runs `Game` |
