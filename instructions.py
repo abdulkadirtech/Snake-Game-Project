@@ -65,6 +65,9 @@ class InstructionsPage:
             ):
                 return "back"
 
+            if event.key == pygame.K_q:
+                return "quit"
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 
             if self.back_rect.collidepoint(event.pos):

@@ -91,7 +91,10 @@ class Menu:
             ):
                 return self.items[self.selected][0]
 
-            elif event.key == pygame.K_ESCAPE:
+            elif event.key == pygame.K_s:
+                return "setting"
+
+            elif event.key in (pygame.K_q, pygame.K_ESCAPE):
                 return "quit"
 
         if event.type == pygame.MOUSEMOTION:

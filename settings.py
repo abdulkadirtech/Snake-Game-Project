@@ -140,6 +140,9 @@ class SettingsPage:
             elif event.key == pygame.K_ESCAPE:
                 return "back"
 
+            elif event.key == pygame.K_q:
+                return "quit"
+
         if event.type == pygame.MOUSEMOTION:
 
             for index, name in enumerate(self.rows):
