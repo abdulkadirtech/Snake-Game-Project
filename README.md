@@ -88,7 +88,8 @@ other.
 **Timer.** OFF plays with no clock. Pick 60 or 90 and that many seconds
 appear at the right of the score bar, counting down. When it reaches
 zero the game ends and the game-over panel shows the final score — both
-scores in two-snake mode.
+scores in two-snake mode, headed by YOU WON or YOU LOST. A draw says
+nothing.
 
 Sound effects and the background music are generated as waveforms at
 startup (`audio.py`). The music only plays during active play, and the

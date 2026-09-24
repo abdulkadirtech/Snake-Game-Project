@@ -684,7 +684,11 @@ class Game:
 
         # Game Over
         if self.game_over:
-            self.gameover_page.draw(self.score, self.rival_score if self.rival else None)
+            self.gameover_page.draw(
+                self.score,
+                self.rival_score if self.rival else None,
+                show_result=True
+            )
 
         elif self.paused:
             self.pause_page.draw(self.score, self.rival_score if self.rival else None)

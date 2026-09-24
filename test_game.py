@@ -300,6 +300,19 @@ t5j = t5j and len(g.foods) == 1 and food not in g.foods
 print(f"Test 5j food handed over early     : {'PASS' if t5j else 'FAIL'}")
 ok &= t5j
 
+# ── Test 5k: the game-over panel says who won ──
+g = Game()
+panel = g.gameover_page
+t5k = (panel.score_lines(11, None, True) == ["SCORE: 11"]
+       and panel.score_lines(9, 6, True) == ["YOU WON", "YOU: 9", "RIVAL: 6"]
+       and panel.score_lines(4, 9, True) == ["YOU LOST", "YOU: 4", "RIVAL: 9"]
+       # a draw says nothing
+       and panel.score_lines(7, 7, True) == ["YOU: 7", "RIVAL: 7"]
+       # and pausing mid-game never gives the result away
+       and panel.score_lines(9, 6, False) == ["YOU: 9", "RIVAL: 6"])
+print(f"Test 5k game-over result line      : {'PASS' if t5k else 'FAIL'}")
+ok &= t5k
+
 # ── Test 6: 2000-step random play never crashes ──
 try:
     random.seed(42)
