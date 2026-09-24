@@ -27,6 +27,10 @@ LIFETIMES = {
 # How long a food blinks before it goes.
 BLINK_FOR = 1200
 
+# Fruit and gold call up their replacement this long before they go, so
+# there is always something worth chasing.
+HANDOVER = 2000
+
 NAMES = [name for name, _, _ in FOOD_TYPES]
 WEIGHTS = [weight for _, _, weight in FOOD_TYPES]
 POINTS = {name: points for name, points, _ in FOOD_TYPES}
@@ -52,6 +56,9 @@ class Food:
 
         self.kind = "apple"
         self.spawned_at = 0
+
+        # Set once this food has called up its replacement.
+        self.handed_over = False
 
         self.position = self.random_position()
 
@@ -92,6 +99,8 @@ class Food:
 
         self.spawned_at = pygame.time.get_ticks()
 
+        self.handed_over = False
+
     @property
     def lifetime(self):
 
@@ -107,6 +116,18 @@ class Food:
         """
 
         return self.time_left() < 0
+
+    def wants_successor(self):
+        """
+        True when this food is nearly gone and should call up another.
+
+        A bomb never does: its replacement arrives when it explodes.
+        """
+
+        if self.kind == "bomb" or self.handed_over:
+            return False
+
+        return self.time_left() < HANDOVER
 
     def draw(self, screen):
 

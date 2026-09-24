@@ -17,7 +17,7 @@ class PanelPage:
         self.title = title
         self.shortcuts = shortcuts
 
-        self.panel = pygame.Rect(0, 0, 500, 300)
+        self.panel = pygame.Rect(0, 0, 500, 330)
 
         self.panel.center = (
             screen.get_width() // 2,
@@ -40,7 +40,7 @@ class PanelPage:
             button_height + 22
         )
 
-        self.button_rect.center = (self.panel.centerx, self.panel.top + 205)
+        self.button_rect.center = (self.panel.centerx, self.panel.top + 220)
 
         quit_width, quit_height = pixelfont.text_size("QUIT", 2, bold=True)
 
@@ -100,7 +100,7 @@ class PanelPage:
 
         return None
 
-    def draw(self, score):
+    def draw(self, score, rival_score=None):
 
         # Dim the game behind the panel.
         shade = pygame.Surface(self.screen.get_size())
@@ -128,14 +128,36 @@ class PanelPage:
             4
         )
 
-        pixelfont.draw(
-            self.screen,
-            f"SCORE: {score}",
-            3,
-            INK,
-            center=self.score_center,
-            bold=True
-        )
+        if rival_score is None:
+
+            pixelfont.draw(
+                self.screen,
+                f"SCORE: {score}",
+                3,
+                INK,
+                center=self.score_center,
+                bold=True
+            )
+
+        else:
+            # Two snakes: show both tallies, and who is ahead.
+            pixelfont.draw(
+                self.screen,
+                f"YOU: {score}",
+                3,
+                INK,
+                center=(self.score_center[0], self.score_center[1] - 20),
+                bold=True
+            )
+
+            pixelfont.draw(
+                self.screen,
+                f"RIVAL: {rival_score}",
+                3,
+                INK,
+                center=(self.score_center[0], self.score_center[1] + 20),
+                bold=True
+            )
 
         for index, (_, label, rect, scale) in enumerate(self.items):
 

@@ -35,8 +35,9 @@ the mouse.
 ## Pages
 
 - **Home** — SNAKE GAME, START, SETTING, QUIT.
-- **Setting** — sound on/off, snake colour (green, orange, blue), and a
-  link to the instruction page.
+- **Setting** — sound ON/OFF, snake colour (green, orange, blue),
+  players mode (1 or 2), timer (OFF, 60 or 90), and a link to the
+  instruction page.
 - **Instructions** — the key list above.
 - **Game** — score bar on top, play field below it.
 - **Paused** and **Game Over** — a panel showing the score, with
@@ -62,10 +63,32 @@ to 80 ms, after which it stays at that pace.
 | Bomb | Eating it explodes and ends the game |
 
 Food does not wait forever. Anything left uneaten blinks and then
-vanishes, replaced by something new — fruit after 9 seconds, gold after
-6, a bomb after 4. A bomb explodes as it goes: the snake survives the
-blast but loses 5 segments and 5 points. So a bomb costs you either way;
-it just costs less if you stay away from it.
+vanishes — fruit after 9 seconds, gold after 6, a bomb after 4. Two
+seconds before a fruit or a gold goes, its replacement already appears
+somewhere else (fruit, gold or bomb, at random), so for that moment
+there are two things on the field and you are never left with nothing
+to chase.
+
+A bomb explodes when it goes, but the blast is only for show: it costs
+neither snake any points or segments. A bomb is dangerous only if you
+eat it.
+
+**Players mode.** 1 is the normal one-snake game. Set it to 2 and a
+second snake shares the field, hunting the food for itself and refusing
+to enter a bomb's cell. It keeps its own score, shown as RIVAL on the
+score bar and on the pause and game-over panels, so you are racing it.
+The two snakes pass through each other — neither can eat the other, and
+even a head-on meeting is harmless. The rival takes a fresh colour every
+game, picked at random from the two you are not using. If it hits a wall
+or itself it simply starts again; only your own snake can end the game.
+
+Both snakes start somewhere different every game, never on top of each
+other.
+
+**Timer.** OFF plays with no clock. Pick 60 or 90 and that many seconds
+appear at the right of the score bar, counting down. When it reaches
+zero the game ends and the game-over panel shows the final score — both
+scores in two-snake mode.
 
 Sound effects and the background music are generated as waveforms at
 startup (`audio.py`). The music only plays during active play, and the
@@ -75,18 +98,22 @@ SOUND setting mutes everything.
 
 ![Repository structure](docs/structure.png)
 
+The screen flow is in [docs/flowchart.md](docs/flowchart.md).
+
 | File | Responsibility |
 |------|----------------|
 | `main.py` | Entry point: starts Pygame and runs `Game` |
 | `game.py` | Main loop, state machine, input, scoring, resizing |
 | `snake.py` | Body, movement, collisions, and the slither drawing |
+| `ai.py` | The rival snake's steering in two-snake mode |
 | `food.py` | Food types, spawning, and their artwork |
 | `effects.py` | The bomb explosion |
 | `menu.py`, `settings.py`, `instructions.py`, `panel.py` | The pages |
-| `ui.py` | The score bar |
+| `ui.py` | The score bar and the clock |
 | `pixelfont.py`, `theme.py` | Bitmap font and shared colours |
 | `audio.py` | Generated beep, explosion and music |
 | `test_game.py` | Automated checks |
+| `docs/` | Flowchart and structure diagrams |
 
 `Game` only coordinates: it never touches the snake's coordinates
 directly. Each module owns its own data and drawing.
@@ -114,6 +141,8 @@ speed is set by that timer, not by how fast the game renders.
 python test_game.py
 ```
 
-Covers reversal blocking, food placement (including staying below the
-score bar), restart, collisions, per-food score and growth, the fatal
-bomb, bomb burnout, and a 2000-step fuzz run. All passing.
+Fourteen checks covering reversal blocking, food placement (including
+staying below the score bar), restart, collisions, per-food score and
+growth, the fatal bomb, the harmless burnout, early food handover,
+rising speed, the match timer, two-snake mode with its random starts
+and colours, and a 2000-step fuzz run. All passing.

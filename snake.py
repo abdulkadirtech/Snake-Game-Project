@@ -4,7 +4,15 @@ import pygame
 
 
 class Snake:
-    def __init__(self, width, height, head_color=None, body_color=None, top=0):
+    def __init__(
+        self,
+        width,
+        height,
+        head_color=None,
+        body_color=None,
+        top=0,
+        start=None
+    ):
 
         self.block_size = 20
 
@@ -13,8 +21,11 @@ class Snake:
 
         # Starting position, snapped to the block grid so the snake can
         # always line up with the food.
-        start_x = width // 2 // self.block_size * self.block_size
-        start_y = (top + height) // 2 // self.block_size * self.block_size
+        if start is None:
+            start_x = width // 2 // self.block_size * self.block_size
+            start_y = (top + height) // 2 // self.block_size * self.block_size
+        else:
+            start_x, start_y = start
 
         # Snake body
         self.body = [
@@ -96,16 +107,6 @@ class Snake:
 
         for _ in range(count):
             self.body.append(tail)
-
-    def shrink(self, count=1):
-
-        # Never shorter than the starting length.
-        for _ in range(count):
-
-            if len(self.body) <= 3:
-                break
-
-            self.body.pop()
 
     def get_head_position(self):
 

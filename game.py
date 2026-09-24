@@ -1,5 +1,8 @@
+import random
+
 import pygame
 
+import ai
 import audio
 from snake import Snake
 from food import Food
@@ -52,11 +55,21 @@ class Game:
         # part of the way through the step, so it glides.
         self.step_timer = 0
 
+        # Milliseconds left when the TIMER setting is on.
+        self.time_left = 0
+
         # Score
         self.score = 0
 
         # Player preferences
         self.settings = Settings()
+
+        # The second snake, when PLAYERS MODE is 2
+        self.rival = None
+        self.rival_score = 0
+
+        # Everything edible on the field right now
+        self.foods = []
 
         self.beep = audio.make_beep()
         self.boom = audio.make_explosion()
@@ -66,6 +79,9 @@ class Game:
 
         if self.music:
             self.music.set_volume(0.35)
+
+        if self.beep:
+            self.beep.set_volume(0.35)
 
         # Create Snake
         self.snake = Snake(
@@ -79,7 +95,7 @@ class Game:
         # Create Food
         # Pass the snake body so the first food never
         # spawns underneath the snake.
-        self.food = self.new_food()
+        self.foods = [self.new_food()]
 
         # UI
         self.ui = UI(self.screen)
@@ -147,13 +163,76 @@ class Game:
             max(block * 4, (self.height - HUD_HEIGHT) // block * block)
         )
 
+    def occupied(self):
+        """
+        Every cell a snake is sitting on.
+        """
+
+        cells = list(self.snake.body)
+
+        if self.rival:
+            cells += self.rival.body
+
+        cells += [food.position for food in self.foods]
+
+        return cells
+
     def new_food(self):
 
         return Food(
             self.field.right,
             self.field.bottom,
-            self.snake.body,
+            self.occupied(),
             self.field.top
+        )
+
+    def random_start(self, avoid=()):
+        """
+        A block-aligned starting cell with room for the snake's tail,
+        well clear of anything in `avoid`.
+        """
+
+        block = 20
+
+        columns = self.field.width // block
+        rows = self.field.height // block
+
+        avoid = set(avoid)
+
+        for _ in range(200):
+
+            x = self.field.left + random.randrange(3, max(4, columns - 1)) * block
+            y = self.field.top + random.randrange(0, rows) * block
+
+            body = [(x - index * block, y) for index in range(3)]
+
+            # Keep a few cells between the two snakes.
+            clash = any(
+                abs(cell[0] - other[0]) + abs(cell[1] - other[1]) < 4 * block
+                for cell in body
+                for other in avoid
+            )
+
+            if not clash:
+                return (x, y)
+
+        return (self.field.centerx // block * block,
+                self.field.centery // block * block)
+
+    def new_rival(self, avoid=()):
+        """
+        The second snake, started somewhere clear of the player's.
+        """
+
+        start = self.random_start(avoid)
+
+        return Snake(
+            self.field.right,
+            self.field.bottom,
+            self.settings.rival_head_color,
+            self.settings.rival_body_color,
+            self.field.top,
+            start
         )
 
     def resize(self, size):
@@ -187,13 +266,15 @@ class Game:
         self.gameover_page = self.build_gameover_page()
         self.gameover_page.selected = selected
 
-        # Keep the food inside the new field.
-        if not self.field.collidepoint(self.food.position):
-            self.food = self.new_food()
-        else:
-            self.food.width = self.field.right
-            self.food.height = self.field.bottom
-            self.food.top = self.field.top
+        # Keep every food inside the new field.
+        for index, food in enumerate(self.foods):
+
+            if not self.field.collidepoint(food.position):
+                self.foods[index] = self.new_food()
+            else:
+                food.width = self.field.right
+                food.height = self.field.bottom
+                food.top = self.field.top
 
     def run(self):
         """
@@ -238,6 +319,8 @@ class Game:
                 if not self.game_over and not self.paused:
 
                     self.step_timer += elapsed
+
+                    self.tick_timer(elapsed)
 
                     while (
                         self.step_timer >= self.step_interval
@@ -378,6 +461,19 @@ class Game:
             self.music_channel.stop()
             self.music_channel = None
 
+    def tick_timer(self, elapsed):
+        """
+        Run the match clock down, and end the game when it empties.
+        """
+
+        if not self.settings.timer:
+            return
+
+        self.time_left = max(0, self.time_left - elapsed)
+
+        if self.time_left == 0:
+            self.game_over = True
+
     def blow_up(self, position):
 
         x, y = position
@@ -386,6 +482,65 @@ class Game:
 
         if self.settings.sound and self.boom:
             self.boom.play()
+
+    def food_at(self, cell):
+        """
+        Take the food sitting on `cell`, if any, off the field.
+        """
+
+        for food in self.foods:
+
+            if food.position == cell:
+                self.foods.remove(food)
+                return food
+
+        return None
+
+    def nearest_safe_food(self):
+        """
+        Where the rival should head: the closest food that is not a
+        bomb.
+        """
+
+        head_x, head_y = self.rival.body[0]
+
+        edible = [food for food in self.foods if food.kind != "bomb"]
+
+        if not edible:
+            return None
+
+        return min(
+            (food.position for food in edible),
+            key=lambda pos: abs(pos[0] - head_x) + abs(pos[1] - head_y)
+        )
+
+    def refresh_food(self):
+        """
+        Clear out anything that has run out of time, let fruit and gold
+        call up their replacement early, and never leave the field
+        empty.
+        """
+
+        for food in list(self.foods):
+
+            if food.expired():
+
+                # A bomb goes off as it goes, but the blast is for
+                # show: it costs neither snake anything.
+                if food.kind == "bomb":
+
+                    self.blow_up(food.position)
+
+                self.foods.remove(food)
+
+            elif food.wants_successor():
+
+                food.handed_over = True
+
+                self.foods.append(self.new_food())
+
+        if not self.foods:
+            self.foods.append(self.new_food())
 
     def update(self):
         """
@@ -396,18 +551,20 @@ class Game:
         self.snake.move()
 
         # Check food
-        if self.snake.get_head_position() == self.food.position:
+        eaten = self.food_at(self.snake.get_head_position())
 
-            if self.food.kind == "bomb":
+        if eaten:
+
+            if eaten.kind == "bomb":
 
                 # Biting a bomb sets it off, and that is the end.
-                self.blow_up(self.food.position)
+                self.blow_up(eaten.position)
 
                 self.game_over = True
 
                 return
 
-            points = self.food.points
+            points = eaten.points
 
             # The snake's length tracks what it is worth.
             self.snake.grow(points)
@@ -417,26 +574,7 @@ class Game:
             if self.settings.sound and self.beep:
                 self.beep.play()
 
-            self.food.randomize(
-                self.snake.body
-            )
-
-        # Uneaten food goes away and another takes its place. A bomb
-        # goes off as it does: the snake survives the blast, but loses
-        # five segments and five points.
-        elif self.food.expired():
-
-            if self.food.kind == "bomb":
-
-                self.blow_up(self.food.position)
-
-                self.snake.shrink(5)
-
-                self.score = max(0, self.score - 5)
-
-            self.food.randomize(
-                self.snake.body
-            )
+        self.refresh_food()
 
         # Check collision
         if self.snake.check_collision(
@@ -445,6 +583,58 @@ class Game:
             self.field.top
         ):
             self.game_over = True
+
+        self.update_rival()
+
+    def update_rival(self):
+        """
+        Move the second snake. It plays for itself: it scores nothing,
+        and the two snakes pass through each other.
+        """
+
+        if not self.rival:
+            return
+
+        # It leaves bombs well alone.
+        target = self.nearest_safe_food()
+
+        # Bombs are cells to stay out of, not just targets to ignore.
+        bombs = [
+            food.position for food in self.foods if food.kind == "bomb"
+        ]
+
+        self.rival.change_direction(
+            ai.next_direction(
+                self.rival,
+                target,
+                self.field,
+                self.snake.body,
+                bombs
+            )
+        )
+
+        self.rival.move()
+
+        eaten = self.food_at(self.rival.get_head_position())
+
+        if eaten:
+
+            if eaten.kind == "bomb":
+                self.blow_up(eaten.position)
+                self.rival = self.new_rival(self.snake.body)
+            else:
+                self.rival.grow(eaten.points)
+                self.rival_score += eaten.points
+
+            self.refresh_food()
+
+        # Walls and its own body still finish it, and it starts over.
+        if self.rival.check_collision(
+            self.field.right,
+            self.field.bottom,
+            self.field.top
+        ):
+            self.rival = self.new_rival(self.snake.body)
 
     def draw(self):
         """
@@ -455,13 +645,17 @@ class Game:
         self.screen.fill(BACKGROUND)
 
         # Draw food
-        self.food.draw(self.screen)
+        for food in self.foods:
+            food.draw(self.screen)
 
         # Draw snake, part way through its current step
         progress = min(1.0, self.step_timer / self.step_interval)
 
         if self.game_over or self.paused:
             progress = 1.0
+
+        if self.rival:
+            self.rival.draw(self.screen, progress)
 
         self.snake.draw(self.screen, progress)
 
@@ -482,14 +676,18 @@ class Game:
         )
 
         # Draw UI
-        self.ui.draw_score(self.score)
+        self.ui.draw_score(
+            self.score,
+            self.time_left if self.settings.timer else None,
+            self.rival_score if self.rival else None
+        )
 
         # Game Over
         if self.game_over:
-            self.gameover_page.draw(self.score)
+            self.gameover_page.draw(self.score, self.rival_score if self.rival else None)
 
         elif self.paused:
-            self.pause_page.draw(self.score)
+            self.pause_page.draw(self.score, self.rival_score if self.rival else None)
 
         pygame.display.flip()
 
@@ -503,13 +701,23 @@ class Game:
         self.paused = False
         self.step_timer = 0
         self.explosions = []
+        self.time_left = self.settings.timer * 1000
 
         self.snake = Snake(
             self.field.right,
             self.field.bottom,
             self.settings.head_color,
             self.settings.body_color,
-            self.field.top
+            self.field.top,
+            self.random_start()
         )
 
-        self.food = self.new_food()
+        self.rival_score = 0
+
+        if self.settings.players == 2:
+            self.settings.pick_rival_color()
+            self.rival = self.new_rival(self.snake.body)
+        else:
+            self.rival = None
+
+        self.foods = [self.new_food()]

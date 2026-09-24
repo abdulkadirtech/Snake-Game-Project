@@ -1,7 +1,18 @@
+import random
+
 import pygame
 
 import pixelfont
 from theme import BACKGROUND, INK, DIM, SNAKE_COLORS
+
+
+# Rows that are a row of little boxes: label, choices, and the value
+# each choice stands for.
+OPTION_ROWS = {
+    "sound": ("SOUND", [("ON", True), ("OFF", False)]),
+    "players": ("PLAYERS MODE", [("1", 1), ("2", 2)]),
+    "timer": ("TIMER", [("OFF", 0), ("60", 60), ("90", 90)]),
+}
 
 
 class Settings:
@@ -14,6 +25,15 @@ class Settings:
         self.sound = True
         self.color_index = 0
 
+        # 1 is the normal single-snake game.
+        self.players = 1
+
+        # Seconds on the clock, or 0 for no time limit.
+        self.timer = 0
+
+        # Re-rolled at the start of every two-snake game.
+        self.rival_index = 1
+
     @property
     def head_color(self):
         return SNAKE_COLORS[self.color_index][1]
@@ -22,10 +42,33 @@ class Settings:
     def body_color(self):
         return SNAKE_COLORS[self.color_index][2]
 
+    def pick_rival_color(self):
+        """
+        Give the rival a fresh colour: a random pick of the two the
+        player is not using.
+        """
+
+        self.rival_index = random.choice(
+            [
+                index
+                for index in range(len(SNAKE_COLORS))
+                if index != self.color_index
+            ]
+        )
+
+    @property
+    def rival_head_color(self):
+        return SNAKE_COLORS[self.rival_index][1]
+
+    @property
+    def rival_body_color(self):
+        return SNAKE_COLORS[self.rival_index][2]
+
 
 class SettingsPage:
     """
-    The setting page: sound, snake colour, keyboard instructions, back.
+    The setting page: sound, snake colour, players, timer, keyboard
+    instructions, back.
     """
 
     def __init__(self, screen, settings):
@@ -47,33 +90,39 @@ class SettingsPage:
         self.label_x = margin
         self.value_x = margin + 360
 
-        self.rows = ["sound", "color", "keyboard", "back"]
+        self.rows = ["sound", "color", "players", "timer", "keyboard", "back"]
+
+        self.row_spacing = 58
 
         self.row_y = {
-            "sound": 235,
-            "color": 305,
-            "keyboard": 375,
+            name: 215 + index * self.row_spacing
+            for index, name in enumerate(self.rows[:-1])
         }
 
-        # ON / OFF boxes
-        on_width, on_height = pixelfont.text_size("ON", 2, bold=True)
-        off_width, _ = pixelfont.text_size("OFF", 2, bold=True)
+        # A row of boxes for each option row
+        self.option_rects = {}
 
-        box_height = on_height + 14
+        for name, (_, choices) in OPTION_ROWS.items():
 
-        self.on_rect = pygame.Rect(
-            self.value_x,
-            self.row_y["sound"] - box_height // 2,
-            on_width + 20,
-            box_height
-        )
+            x = self.value_x
+            rects = []
 
-        self.off_rect = pygame.Rect(
-            self.on_rect.right + 6,
-            self.on_rect.top,
-            off_width + 20,
-            box_height
-        )
+            for label, _ in choices:
+
+                box_width, box_height = pixelfont.text_size(label, 2, bold=True)
+
+                rect = pygame.Rect(
+                    x,
+                    self.row_y[name] - (box_height + 14) // 2,
+                    box_width + 20,
+                    box_height + 14
+                )
+
+                rects.append(rect)
+
+                x = rect.right + 6
+
+            self.option_rects[name] = rects
 
         # Colour swatches
         swatch_size = 34
@@ -93,12 +142,38 @@ class SettingsPage:
 
         self.back_rect = pygame.Rect(
             margin,
-            height - 120,
+            height - 100,
             back_width + 20,
             back_height + 14
         )
 
         self.selected = 0
+
+    # ---- values ------------------------------------------------------
+
+    def chosen_index(self, name):
+        """
+        Which choice of an option row is currently in force.
+        """
+
+        _, choices = OPTION_ROWS[name]
+
+        current = getattr(self.settings, name)
+
+        for index, (_, value) in enumerate(choices):
+
+            if value == current:
+                return index
+
+        return 0
+
+    def choose(self, name, index):
+
+        _, choices = OPTION_ROWS[name]
+
+        setattr(self.settings, name, choices[index % len(choices)][1])
+
+    # ---- input -------------------------------------------------------
 
     def handle_event(self, event):
         """
@@ -158,11 +233,12 @@ class SettingsPage:
             if self.row_hovered("keyboard", event.pos):
                 return "instructions"
 
-            if self.on_rect.collidepoint(event.pos):
-                self.settings.sound = True
+            for name, rects in self.option_rects.items():
 
-            elif self.off_rect.collidepoint(event.pos):
-                self.settings.sound = False
+                for index, rect in enumerate(rects):
+
+                    if rect.collidepoint(event.pos):
+                        self.choose(name, index)
 
             for index, rect in enumerate(self.swatch_rects):
 
@@ -176,7 +252,7 @@ class SettingsPage:
         if name == "back":
             return self.back_rect.collidepoint(pos)
 
-        return abs(pos[1] - self.row_y[name]) < 30
+        return abs(pos[1] - self.row_y[name]) < self.row_spacing // 2
 
     def change(self, step):
         """
@@ -185,13 +261,15 @@ class SettingsPage:
 
         row = self.rows[self.selected]
 
-        if row == "sound":
-            self.settings.sound = not self.settings.sound
-
-        elif row == "color":
+        if row == "color":
             self.settings.color_index = (
                 self.settings.color_index + step
             ) % len(SNAKE_COLORS)
+
+        elif row in OPTION_ROWS:
+            self.choose(row, self.chosen_index(row) + step)
+
+    # ---- drawing -----------------------------------------------------
 
     def draw(self):
 
@@ -218,11 +296,12 @@ class SettingsPage:
         selected_row = self.rows[self.selected]
 
         # Labels
-        for name, label in (
-            ("sound", "SOUND"),
-            ("color", "SNAKE COLOR"),
-            ("keyboard", "KEYBOARD INSTRUCTIONS"),
-        ):
+        labels = {name: label for name, (label, _) in OPTION_ROWS.items()}
+        labels["color"] = "SNAKE COLOR"
+        labels["keyboard"] = "KEYBOARD INSTRUCTIONS"
+
+        for name, label in labels.items():
+
             _, label_height = pixelfont.text_size(label, 3, bold=True)
 
             pixelfont.draw(
@@ -234,26 +313,29 @@ class SettingsPage:
                 bold=True
             )
 
-        # SOUND: ON / OFF
-        for rect, label, active in (
-            (self.on_rect, "ON", self.settings.sound),
-            (self.off_rect, "OFF", not self.settings.sound),
-        ):
-            if active:
-                pygame.draw.rect(self.screen, INK, rect)
-                text_color = BACKGROUND
-            else:
-                pygame.draw.rect(self.screen, INK, rect, 3)
-                text_color = INK
+        # Option rows: the chosen box is filled in
+        for name, rects in self.option_rects.items():
 
-            pixelfont.draw(
-                self.screen,
-                label,
-                2,
-                text_color,
-                center=rect.center,
-                bold=True
-            )
+            _, choices = OPTION_ROWS[name]
+            chosen = self.chosen_index(name)
+
+            for index, rect in enumerate(rects):
+
+                if index == chosen:
+                    pygame.draw.rect(self.screen, INK, rect)
+                    text_color = BACKGROUND
+                else:
+                    pygame.draw.rect(self.screen, INK, rect, 3)
+                    text_color = INK
+
+                pixelfont.draw(
+                    self.screen,
+                    choices[index][0],
+                    2,
+                    text_color,
+                    center=rect.center,
+                    bold=True
+                )
 
         # SNAKE COLOR: swatches
         for index, rect in enumerate(self.swatch_rects):
