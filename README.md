@@ -2,9 +2,14 @@
 
 A Snake game built with Python and Pygame.
 
-- **Team**: 何岚, 李思齐， 奥马尔
 - **Instructor**: 黄天羽
 - **Built with**: Python 3, Pygame 2.x
+
+| Member | Role |
+|--------|------|
+| 李思齐 | Programmer |
+| 何岚 | Programmer and user interface designer |
+| 奥马尔 | Tester and debugger |
 
 ## Running it
 
@@ -38,10 +43,10 @@ the mouse.
 - **Setting** — sound ON/OFF, snake colour (green, orange, blue),
   players mode (1 or 2), timer (OFF, 60 or 90), and a link to the
   instruction page.
-- **Instructions** — the key list above.
+- **Instructions** — the in-game key list.
 - **Game** — score bar on top, play field below it.
-- **Paused** and **Game Over** — a panel showing the score, with
-  RESUME/REPLAY and QUIT.
+- **Paused** and **Game Over** — a panel showing the score (both
+  scores in two-snake mode), with RESUME/REPLAY and QUIT.
 
 Everything is drawn in a green-on-black terminal style using a bitmap
 font defined in code (`pixelfont.py`), so the game ships with no image
@@ -142,8 +147,8 @@ speed is set by that timer, not by how fast the game renders.
 python test_game.py
 ```
 
-Fourteen checks covering reversal blocking, food placement (including
+Sixteen checks covering reversal blocking, food placement (including
 staying below the score bar), restart, collisions, per-food score and
 growth, the fatal bomb, the harmless burnout, early food handover,
 rising speed, the match timer, two-snake mode with its random starts
-and colours, and a 2000-step fuzz run. All passing.
+and colours, the won/lost line, and a 2000-step fuzz run. All passing.
